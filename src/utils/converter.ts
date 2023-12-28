@@ -1,4 +1,5 @@
-import { type FileDescriptor, type FileResponse } from "~/api/types";
+import { type DirectoryDescriptor, type FileDescriptor } from "./api/types";
+
 
 export function dirResponseToDescriptor(response: DirectoryResponse): DirectoryDescriptor {
 
