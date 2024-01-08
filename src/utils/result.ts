@@ -1,3 +1,4 @@
+import { assert } from './contract';
 import { type Option, Some, None } from './option';
 
 type Ok_<T> = { __type: 'Ok'; value: T };
@@ -23,6 +24,12 @@ function isErr_<T, E>(r: Result_<T, E>): r is Err_<E> {
 export type Unit = { __type: 'Unit' };
 export const unit: Unit = { __type: 'Unit' };
 
+export function assertIsError(e: unknown): asserts e is Error {
+  assert(e instanceof Error);
+}
+
+class ResultError extends Error {}
+
 export class Result<T, E> {
   data: Result_<T, E>;
 
@@ -43,16 +50,7 @@ export class Result<T, E> {
     return Err(unit);
   }
 
-  static fromException<T>(fn: () => T): Result<T, unknown> {
-    try {
-      const val: T = fn();
-      return Ok(val);
-    } catch (err) {
-      return Err(err);
-    }
-  }
-
-  static fromError<T, E>(fn: () => T): Result<T, E> {
+  static fromException<T, E = unknown>(fn: () => T): Result<T, E> {
     try {
       const val: T = fn();
       return Ok(val);
@@ -61,9 +59,57 @@ export class Result<T, E> {
     }
   }
 
+  static fromError<T>(fn: () => T): Result<T, Error> {
+    try {
+      const val: T = fn();
+      return Ok(val);
+    } catch (err) {
+      assertIsError(err)
+      return Err(err);
+    }
+  }
+
+  static async fromExceptionAsync<T, E = unknown>(p: Promise<T>): Promise<Result<T, E>> {
+    try {
+      const val = await p;
+      return Ok(val);
+    } catch (err) {
+      return Err(err as E);
+    }
+  }
+
+  static async fromErrorAsync<T>(p: Promise<T>): Promise<Result<T, Error>> {
+    try {
+      const val = await p;
+      return Ok(val);
+    } catch (err) {
+      assertIsError(err);
+      return Err(err);
+    }
+  }
+
+  static async multipleExceptionAsync<T>(promises: Promise<T>[]): Promise<Result<T[], unknown>> {
+    try {
+      const result = await Promise.all(promises);
+      return Ok(result);
+    } catch (err) {
+      return Err(err);
+    }
+  }
+
+  static async multipleErrorAsync<T>(promises: Promise<T>[]): Promise<Result<T[], Error>> {
+    try {
+      const result = await Promise.all(promises);
+      return Ok(result);
+    } catch (err) {
+      assertIsError(err);
+      return Err(err);
+    }
+  }
+
   unwrap(): T {
     if (isOk_(this.data)) return this.data.value;
-    throw new Error('Tried unwrapping result to Ok, but had type Err');
+    throw new ResultError('Tried unwrapping result to Ok, but had type Err');
   }
 
   unwrapOrDefault(default_: T): T {
@@ -78,7 +124,7 @@ export class Result<T, E> {
 
   expect(errMsg: string): T {
     if (isOk_(this.data)) return this.data.value;
-    throw new Error(errMsg);
+    throw new ResultError(errMsg);
   }
 
   toOption(): Option<T> {
@@ -108,7 +154,7 @@ export class Result<T, E> {
     return errCase(this.data.value);
   }
 
-  matchEffect<L, R>(okCase: (t: T) => L, errCase: (e: E) => R): void {
+  matchEffect(okCase: (t: T) => void, errCase: (e: E) => void): void {
     if (isOk_(this.data)) okCase(this.data.value);
     else errCase(this.data.value);
   }
@@ -149,12 +195,12 @@ export class Result<T, E> {
 
   unwrapErr(): E {
     if (isErr_(this.data)) return this.data.value;
-    throw new Error('Tried unwrapping result to type Err, but had type Ok');
+    throw new ResultError('Tried unwrapping result to type Err, but had type Ok');
   }
 
   expectErr(errMsg: string): E {
     if (isErr_(this.data)) return this.data.value;
-    throw new Error(errMsg);
+    throw new ResultError(errMsg);
   }
 
   mapErr<J>(fn: (e: E) => J): Result<T, J> {

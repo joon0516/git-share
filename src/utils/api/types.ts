@@ -1,26 +1,4 @@
-import { type Prettify } from '~/utils/utilityTypes';
-
-////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////
-//! DESCRIPTOR TYPES
-////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////
-
-export interface FileDescriptor {
-  type: 'file';
-  name: string;
-  path: string;
-}
-
-export interface DirectoryDescriptor {
-  type: 'directory';
-  name: string;
-  path: string;
-}
-
-export type TreeItemDescriptor = FileDescriptor | DirectoryDescriptor;
+import { z } from 'zod';
 
 ////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -30,26 +8,29 @@ export type TreeItemDescriptor = FileDescriptor | DirectoryDescriptor;
 ////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////
 
-/* https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28 */
-interface DirectoryResponseItem {
-  type: string;
-  size: number;
-  name: string;
-  path: string;
-  sha: string;
-  git_url: string;
-  download_url: string;
-  _links: {
-    self: string;
-    git: string;
-    html: string;
-  };
-}
+const individualFile = z.object({
+  type: z.literal('file').or(z.literal('dir')),
+  size: z.number(),
+  name: z.string(),
+  path: z.string(),
+  sha: z.string(),
+  git_url: z.string(),
+  download_url: z.string(),
+  _links: z.object({
+    self: z.string(),
+    git: z.string(),
+    html: z.string(),
+  }),
+})
 
-type DirectoryResponse_ = DirectoryResponseItem & {
-  entries: DirectoryResponseItem[];
-};
-export type DirectoryResponse = Prettify<DirectoryResponse_>;
+const directoryResponse = individualFile.omit({type: true}).extend({
+  type: z.literal('dir'),
+  entries: z.array(individualFile)
+})
+
+/* https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28 */
+export type DirectoryResponse = z.infer<typeof directoryResponse>
+export const directoryResponseSchema = directoryResponse
 
 ////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -59,22 +40,24 @@ export type DirectoryResponse = Prettify<DirectoryResponse_>;
 ////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////
 
-/* https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28 */
-export interface FileResponse {
-  type: string;
-  encoding: string;
-  size: number;
-  name: string;
-  path: string;
-  content: Blob;
-  sha: string;
-  url: string;
-  git_url: string;
-  html_url: string;
-  download_url: string;
-  _links: {
-    git: string;
-    self: string;
-    html: string;
-  };
-}
+const fileResponse = z.object({
+  type: z.literal('file'),
+  size: z.number(),
+  name: z.string(),
+  path: z.string(),
+  content: z.string(),
+  encoding: z.string(),
+  sha: z.string(),
+  url: z.string(),
+  git_url: z.string(),
+  html_url: z.string(),
+  download_url: z.string(),
+  _links: z.object({
+    git: z.string(),
+    self: z.string(),
+    html: z.string(),
+  })
+})
+
+export type FileResponse = z.infer<typeof fileResponse>
+export const fileResponseSchema = fileResponse

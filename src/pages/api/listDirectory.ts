@@ -1,11 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
-import { readFile } from '~/utils/api/gitAPI';
-import { type FileResponse } from '~/utils/api/types';
+import { getFilesFromDirectory } from '~/utils/api/gitAPI';
+import { type DirectoryResponse } from '~/utils/api/types';
 import { Option } from '~/utils/option';
 import { Err, Result } from '~/utils/result';
 
-type ResponseData = Result<FileResponse, string>;
+type ResponseData = Result<DirectoryResponse, string>;
 
 const requestSchema = z.object({
   path: z.string(),
@@ -22,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
   }
 
   const params = parsed.unwrap();
-  const result = await readFile(
+  const result = await getFilesFromDirectory(
     params.path,
     params.owner,
     params.repository,
