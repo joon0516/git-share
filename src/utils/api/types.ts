@@ -8,25 +8,20 @@ import { z } from 'zod';
 ////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////
 
-const individualFile = z.object({
+const individualItem = z.object({
   type: z.literal('file').or(z.literal('dir')),
   size: z.number(),
   name: z.string(),
   path: z.string(),
   sha: z.string(),
   git_url: z.string(),
-  download_url: z.string(),
   _links: z.object({
     self: z.string(),
     git: z.string(),
     html: z.string(),
   }),
 })
-
-const directoryResponse = individualFile.omit({type: true}).extend({
-  type: z.literal('dir'),
-  entries: z.array(individualFile)
-})
+const directoryResponse = z.array(individualItem)
 
 /* https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28 */
 export type DirectoryResponse = z.infer<typeof directoryResponse>

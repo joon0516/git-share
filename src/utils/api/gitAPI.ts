@@ -40,10 +40,11 @@ export async function getFilesFromDirectory(
   if (parsed.isErr()) {
     const error = parsed.unwrapErr() as ZodError<FileResponse>;
     const formatted = error.format();
+    console.error(formatted, error)
 
     if (formatted.type?._errors)
       return Err('This API route is for directories, but you provided a file path');
-    return Err(`Zod parsing failed. Got ${JSON.stringify(response.unwrap())}`);
+    return Err(`Zod parsing failed`);
   }
 
   return Ok(parsed.unwrap());

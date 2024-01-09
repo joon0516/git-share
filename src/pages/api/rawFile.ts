@@ -3,9 +3,9 @@ import { z } from 'zod';
 import { readFile } from '~/utils/api/gitAPI';
 import { type FileResponse } from '~/utils/api/types';
 import { Option } from '~/utils/option';
-import { Err, Result } from '~/utils/result';
+import { Result } from '~/utils/result';
 
-type ResponseData = Result<FileResponse, string>;
+type ResponseData = FileResponse | string;
 
 const requestSchema = z.object({
   path: z.string(),
@@ -18,7 +18,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
   const parsed = Result.fromError(() => requestSchema.parse(req.headers));
 
   if (parsed.isErr()) {
-    res.status(200).send(Err(parsed.unwrapErr().message));
+    res.status(400).send(parsed.unwrapErr().message);
   }
 
   const params = parsed.unwrap();
@@ -29,5 +29,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     Option.fromNull(params.branch),
   );
 
-  res.status(200).send(result);
+  result.match(
+    (t) => res.status(200).send(t),
+    (e) => res.status(400).send(e),
+  );
 }
